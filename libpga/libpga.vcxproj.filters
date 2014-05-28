@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="test2">
+      <UniqueIdentifier>{d828b843-6dbc-4966-a609-0bd67b7b8f79}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="test3">
+      <UniqueIdentifier>{ee837124-b0eb-460d-9d2d-0e93fe7da5e0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lib">
+      <UniqueIdentifier>{0a3a2bf7-f54c-48db-ba67-439f618de065}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="test">
+      <UniqueIdentifier>{8387c9ce-f408-4990-9875-3f4851770492}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="..\src\pga.cu">
+      <Filter>lib</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\test\test.cu">
+      <Filter>test</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\test3\test.cu">
+      <Filter>test3</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\test2\test.cu">
+      <Filter>test2</Filter>
+    </CudaCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\pga.h">
+      <Filter>lib</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

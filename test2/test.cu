@@ -37,8 +37,8 @@ __device__ float objf(gene *g, unsigned genome_len) {
 
 __device__ obj_f ofunction = objf;
 
-int main() {
-	pga_t *p = pga_init();
+int main(int argc, char **argv) {
+	pga_t *p = pga_init(&argc, &argv);
 
 	population_t *pop = pga_create_population(p, 100, ITEM_COUNT, RANDOM_POPULATION);
 
