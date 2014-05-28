@@ -37,6 +37,8 @@ __device__ float objf(gene *g, unsigned genome_len) {
 
 __device__ obj_f ofunction = objf;
 
+#define ISLANDS
+
 int main(int argc, char **argv) {
 	pga_t *p = pga_init(&argc, &argv);
 
@@ -46,7 +48,11 @@ int main(int argc, char **argv) {
 	cudaMemcpyFromSymbol( &func , ofunction , sizeof(obj_f));
 	pga_set_objective_function(p, (obj_f)func);
 	
-	pga_run(p, 5, 0.f);
+#ifdef ISLANDS
+	pga_run_islands(p, 5, 0.f, 10, 30.f);
+#else
+  pga_run(p, 5, 0.f);
+#endif
 	
 	gene* g = pga_get_best(p, pop);
 	

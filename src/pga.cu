@@ -134,28 +134,33 @@ __device__ void __default_crossover(gene *p1, gene *p2, gene *c, float *rand, un
 __device__ crossover_f __crossover = __default_crossover;
 __device__ mutate_f __mutate = __default_mutate;
 
+int mpi_myrank = 0;
+int mpi_device_count = 0;
+
 pga_t *pga_init(int *argc, char ***argv) {
-  char message[20];
-  int myrank, tag=99;
-  MPI_Status status;
+//  char message[20];
+//  int tag=99;
+  //MPI_Status status;
 
   /* Initialize the MPI library */
   MPI_Init(argc, argv);
   /* Determine unique id of the calling process of all processes participating
       in this MPI program. This id is usually called MPI rank. */
-  MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+  MPI_Comm_rank(MPI_COMM_WORLD, &mpi_myrank);
 
-  if (myrank == 0) {
-      strcpy(message, "Hello, there");
+  MPI_Comm_size(MPI_COMM_WORLD, &mpi_device_count);
+
+  //if (myrank == 0) {
+  //    strcpy(message, "Hello, there");
       /* Send the message "Hello, there" from the process with rank 0 to the
           process with rank 1. */
-      MPI_Send(message, strlen(message)+1, MPI_CHAR, 1, tag, MPI_COMM_WORLD);
-  } else {
+  //    MPI_Send(message, strlen(message)+1, MPI_CHAR, 1, tag, MPI_COMM_WORLD);
+  //} else {
       /* Receive a message with a maximum length of 20 characters from process
           with rank 0. */
-      MPI_Recv(message, 20, MPI_CHAR, 0, tag, MPI_COMM_WORLD, &status);
-      printf("received %s\n", message);
-  }
+  //    MPI_Recv(message, 20, MPI_CHAR, 0, tag, MPI_COMM_WORLD, &status);
+  //    printf("received %s\n", message);
+  //}
 
 	pga_t *ret = (pga_t*) malloc(sizeof(pga_t));
 	if (ret == NULL) {
@@ -345,10 +350,17 @@ void pga_swap_generations(pga_t *p, population_t *pop) {
 
 void pga_migrate(pga_t *p, float pct) {
 	//TODO: grzesiu
+  pga_migrate_between(p, p->populations[0], p->populations[0], pct);
 }
 
 void pga_migrate_between(pga_t *p, population_t *pop_org, population_t *pop_target, float pct) {
-	//TODO: grzesiu
+  //MPI rank 0
+  //cudaMemcpy(s_buf_h,s_buf_d,size,cudaMemcpyDeviceToHost);
+ // MPI_Send(s_buf_h,size,MPI_CHAR,1,100,MPI_COMM_WORLD);
+
+  //MPI rank 1
+  //MPI_Recv(r_buf_h,size,MPI_CHAR,0,100,MPI_COMM_WORLD, &status);
+  //cudaMemcpy(r_buf_d,r_buf_h,size,cudaMemcpyHostToDevice);
 }
 
 void pga_run(pga_t *p, unsigned n, float value) {
@@ -362,12 +374,35 @@ void pga_run(pga_t *p, unsigned n, float value) {
 		pga_crossover(p, p->populations[0], TOURNAMENT);
 		pga_mutate(p, p->populations[0]);
 		pga_swap_generations(p, p->populations[0]);
-		
 	}
 
 	pga_evaluate(p, p->populations[0]);
 }
 
 void pga_run_islands(pga_t *p, unsigned n, float value, unsigned m, float pct) {
-	//TODO: grzesiu	
+	unsigned sub_count = 0;
+
+	if (p->p_count == 0) {
+		return;
+	}
+
+  if (mpi_device_count < 2) {
+    printf("\nNeed at least two MPI nodes to run on islands!");
+    return;
+  }
+	
+	for (int i = 0; (unsigned)i < n; ++i,++sub_count) {
+		pga_fill_random_values(p, p->populations[0]);
+		pga_evaluate(p, p->populations[0]);
+		pga_crossover(p, p->populations[0], TOURNAMENT);
+		pga_mutate(p, p->populations[0]);
+		pga_swap_generations(p, p->populations[0]);
+		
+    if (sub_count >= m) {
+      sub_count = 0;
+      pga_migrate(p, pct);
+    }
+	}
+
+	pga_evaluate(p, p->populations[0]);
 }

@@ -90,3 +90,4 @@ packages/
 *.x86_64
 *.hex
 
+libpga/vc110.pdb
