@@ -140,29 +140,12 @@ int mpi_myrank = 0;
 int mpi_device_count = 0;
 
 pga_t *pga_init(int *argc, char ***argv) {
-//  char message[20];
-//  int tag=99;
-  //MPI_Status status;
-
   /* Initialize the MPI library */
   MPI_Init(argc, argv);
-  /* Determine unique id of the calling process of all processes participating
-      in this MPI program. This id is usually called MPI rank. */
+
   MPI_Comm_rank(MPI_COMM_WORLD, &mpi_myrank);
 
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_device_count);
-
-  //if (myrank == 0) {
-  //    strcpy(message, "Hello, there");
-      /* Send the message "Hello, there" from the process with rank 0 to the
-          process with rank 1. */
-  //    MPI_Send(message, strlen(message)+1, MPI_CHAR, 1, tag, MPI_COMM_WORLD);
-  //} else {
-      /* Receive a message with a maximum length of 20 characters from process
-          with rank 0. */
-  //    MPI_Recv(message, 20, MPI_CHAR, 0, tag, MPI_COMM_WORLD, &status);
-  //    printf("received %s\n", message);
-  //}
 
 	pga_t *ret = (pga_t*) malloc(sizeof(pga_t));
 	if (ret == NULL) {
