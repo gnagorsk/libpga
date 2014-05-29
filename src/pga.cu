@@ -66,9 +66,7 @@ __global__ void __g_random_generate(gene *genomes, unsigned genome_len, float *r
 	int index = threadIdx.x + blockIdx.x * blockDim.x;
 	if (index >= p_size) return;
 
-	for (int i = 0; i < genome_len; ++i) {
-		GET_GENOME(genomes, index, genome_len)[i] = rand[(index*genome_len)+i];
-	}
+	COPY_GENOME(GET_GENOME(genomes, index, genome_len), GET_GENOME(rand, index, genome_len), genome_len);	
 }
 
 void __random_generate(pga_t * p, population_t *pop) {
