@@ -66,7 +66,9 @@ __device__ void crossover(gene *p1, gene *p2, gene *c, float *rand, unsigned gen
 __device__ crossover_f cfunction = crossover;
 __device__ obj_f ofunction = objf;
 
-int main() {
+#define ISLANDS
+
+int main(int argc, char **argv) {
 	float host_city_matrix[MAX_CITY_COUNT][MAX_CITY_COUNT];
 	int city_count = MAX_CITY_COUNT;
 	scanf("%u", &city_count);
@@ -78,9 +80,7 @@ int main() {
 	
 	cudaMemcpyToSymbol(city_matrix, &host_city_matrix, sizeof(float)*(city_count*city_count));	
 	
-	pga_t *p = pga_init();
-
-	
+	pga_t *p = pga_init(&argc, &argv);
 	
 	population_t *pop = pga_create_population(p, 1000, city_count, RANDOM_POPULATION);
 	
@@ -90,7 +90,11 @@ int main() {
 	cudaMemcpyFromSymbol(&func ,cfunction ,sizeof(crossover_f));
 	pga_set_crossover_function(p, (crossover_f)func);
 	
-	pga_run(p, 1000, 0.f);
+#ifdef ISLANDS
+  pga_run_islands(p, 1000, 0.f, 50, 30.f);
+#else
+  pga_run(p, 1000, 0.f);
+#endif
 	
 	gene* g = pga_get_best(p, pop);
 	

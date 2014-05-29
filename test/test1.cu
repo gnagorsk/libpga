@@ -19,8 +19,6 @@
 #include <float.h>
 #include <stdio.h>
 
-#define GENOME_LENGTH 1000
-
 __device__ float objf(gene *g, unsigned length) {
 	float s = 0;
 	for (int i = 0; i < length; ++i) {
@@ -31,19 +29,25 @@ __device__ float objf(gene *g, unsigned length) {
 
 __device__ obj_f ofunction = objf;
 
-int main() {
-	pga_t *p = pga_init();
+#define ISLANDS
 
-	population_t *pop = pga_create_population(p, 40000, GENOME_LENGTH, RANDOM_POPULATION);
+int main(int argc, char **argv) {
+	pga_t *p = pga_init(&argc, &argv);
+
+	population_t *pop = pga_create_population(p, RANDOM_POPULATION);
 
 	void *func;
 	cudaMemcpyFromSymbol( &func , ofunction , sizeof(obj_f));
 	pga_set_objective_function(p, (obj_f)func);
 	
-	pga_run(p, 100, 0.f);
-	
+#ifdef ISLANDS
+  pga_run_islands(p, 100, 0.f, 50, 30.f);
+#else
+  pga_run(p, 100, 0.f);
+#endif
+
 	pga_get_best(p, pop);
-	
+
 	pga_deinit(p);
 	return 0;
 }

@@ -36,15 +36,18 @@ inline void gpuAssert(cudaError_t code, char *file, int line, bool abort=true)
 
 static curandGenerator_t randGen;
 
+#define MPI_TAG_EMIGRATION_INIT     10
+#define MPI_TAG_EMIGRATION_RESPONSE 20
+
 struct population {
-	unsigned long size;
-	unsigned genome_len;
 	gene *_g;
 	gene *current_gen;
 	gene *next_gen;
 	gene *_g2;
 	float *score;
 	float *rand;
+  int genome_len;
+  int size;
 };
 
 #define THREADS 512
@@ -91,8 +94,10 @@ void pga_fill_random_values(pga_t *p, population_t *pop) {
 }
 
 void __fill_population(pga_t *pg, population_t *p, enum population_type type) {
-	
-	CCE(cudaMalloc((void**)&p->_g, sizeof(gene)*p->genome_len*p->size));	
+	p->size = POPULATION_SIZE;
+  p->genome_len = GENOME_LENGTH;
+
+	CCE(cudaMalloc((void**)&p->_g, sizeof(gene)*p->genome_len*p->size));
 	CCE(cudaMalloc((void**)&p->_g2, sizeof(gene)*p->genome_len*p->size));
 	CCE(cudaMalloc((void**)&p->score, sizeof(float)*p->size));
 	CCE(cudaMalloc((void**)&p->rand, sizeof(float)*p->size*p->genome_len));
@@ -175,7 +180,7 @@ pga_t *pga_init(int *argc, char ***argv) {
 	pga_set_mutate_function(ret, (mutate_f)func);	
 	cudaMemcpyFromSymbol( &func , __crossover , sizeof(crossover_f));
 	pga_set_crossover_function(ret, (crossover_f)func);
-	
+
 	return ret;
 }
 
@@ -192,14 +197,14 @@ void pga_deinit(pga_t *p) {
   MPI_Finalize();
 }
 
-population_t *pga_create_population(pga_t *p, unsigned long size, unsigned genome_len, enum population_type type) {
+population_t *pga_create_population(pga_t *p, enum population_type type) {
 	population_t *pop = NULL;
 
 	if (p->p_count == MAX_POPULATIONS) {
-		return NULL;	
+		return NULL;
 	}
 	
-	if (genome_len < 4) {
+  if (GENOME_LENGTH < 4) {
 		return NULL;
 	}
 
@@ -209,13 +214,10 @@ population_t *pga_create_population(pga_t *p, unsigned long size, unsigned genom
 		return NULL;
 	}
 
-	pop->size = size;
-	pop->genome_len = genome_len;
-
 	p->populations[p->p_count++] = pop;
 	
 	p->threads = THREADS;
-	p->blocks = (unsigned long)ceil(size / (float)p->threads);	
+	p->blocks = (unsigned long)ceil(POPULATION_SIZE / (float)p->threads);	
 	__fill_population(p, pop, type);
 	return pop;
 }
@@ -233,11 +235,11 @@ void pga_set_crossover_function(pga_t *p, crossover_f f) {
 }
 
 gene *pga_get_best(pga_t *p, population_t *pop) {
-	float *host_score = (float*) malloc(sizeof(float)*pop->size);
-	cudaMemcpy(host_score, pop->score, sizeof(float)*pop->size, cudaMemcpyDeviceToHost);
+	float *host_score = (float*) malloc(sizeof(float)*POPULATION_SIZE);
+	cudaMemcpy(host_score, pop->score, sizeof(float)*POPULATION_SIZE, cudaMemcpyDeviceToHost);
 	float best = 0;
 	int best_id = -1;
-	for (int i = 0; (unsigned long)i < pop->size; ++i) {
+	for (int i = 0; (unsigned long)i < POPULATION_SIZE; ++i) {
 		if (best_id == -1 || best < host_score[i]) {
 			best = host_score[i];
 			best_id = i;
@@ -245,8 +247,8 @@ gene *pga_get_best(pga_t *p, population_t *pop) {
 			
 	}
 	printf("%f\n", best);
-	gene *solution = (gene*) malloc(sizeof(gene)*pop->genome_len);
-	cudaMemcpy(solution, GET_GENOME(pop->current_gen, best_id, pop->genome_len), sizeof(gene)*pop->genome_len, cudaMemcpyDeviceToHost);
+  gene *solution = (gene*) malloc(sizeof(gene)*GENOME_LENGTH);
+	cudaMemcpy(solution, GET_GENOME(pop->current_gen, best_id, GENOME_LENGTH), sizeof(gene)*GENOME_LENGTH, cudaMemcpyDeviceToHost);
 	free(host_score);
 	return solution;
 }
@@ -271,7 +273,7 @@ __global__ void __g_evaluate(obj_f obj, gene *genomes, float *score, unsigned lo
 }
 
 void pga_evaluate(pga_t *p, population_t *pop) {
-	__g_evaluate<<<p->blocks, p->threads>>>(p->objective, pop->current_gen, pop->score, pop->size, pop->genome_len);
+  __g_evaluate<<<p->blocks, p->threads>>>(p->objective, pop->current_gen, pop->score, POPULATION_SIZE, GENOME_LENGTH);
 
 	CCE(cudaPeekAtLastError());
 	CCE(cudaDeviceSynchronize());
@@ -312,7 +314,7 @@ __global__ void __g_crossover(crossover_f crossover, gene *newg, gene *oldg, flo
 }
 
 void pga_crossover(pga_t *p, population_t *pop, enum crossover_selection_type type) {
-	__g_crossover<<<p->blocks, p->threads>>>(p->crossover, pop->next_gen, pop->current_gen, pop->score, pop->rand, pop->genome_len, pop->size);
+  __g_crossover<<<p->blocks, p->threads>>>(p->crossover, pop->next_gen, pop->current_gen, pop->score, pop->rand, GENOME_LENGTH, POPULATION_SIZE);
 	CCE(cudaPeekAtLastError());
 	CCE(cudaDeviceSynchronize());
 }
@@ -331,7 +333,7 @@ __global__ void __g_mutate(mutate_f mutate_func, gene *genomes, float* rand, uns
 }
 
 void pga_mutate(pga_t *p, population_t *pop) {
-	__g_mutate<<<p->blocks, p->threads>>>(p->mutate, pop->next_gen, pop->rand, pop->size, pop->genome_len);
+  __g_mutate<<<p->blocks, p->threads>>>(p->mutate, pop->next_gen, pop->rand, POPULATION_SIZE, GENOME_LENGTH);
 	CCE(cudaPeekAtLastError());
 	CCE(cudaDeviceSynchronize());
 }
@@ -348,19 +350,67 @@ void pga_swap_generations(pga_t *p, population_t *pop) {
 	pop->current_gen = t;
 }
 
-void pga_migrate(pga_t *p, float pct) {
-	//TODO: grzesiu
-  pga_migrate_between(p, p->populations[0], p->populations[0], pct);
+MPI_Request *ImigrationRequest;
+MPI_Request *EmigrationRequest;
+
+void *ImigrationBuffer;
+void *EmigrationBuffer;
+
+void pga_imigration(pga_t *p, int population_part) {
+  MPI_Status status = {0};
+  int flag = 0;
+
+  // If there is no recieve awaiting - create it
+  if (ImigrationRequest == NULL) {
+    ImigrationRequest = (MPI_Request *)malloc(sizeof(MPI_Request));
+    memset(ImigrationBuffer, 0, sizeof(MPI_Request));
+    MPI_Irecv(ImigrationBuffer, GENOME_LENGTH * population_part, MPI_FLOAT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, ImigrationRequest);
+  }
+
+  // Test if the recieve has something
+  MPI_Test(ImigrationRequest, &flag, &status);
+
+  if (flag) {
+    // If it recieved a population - copy it to our population
+    cudaMemcpy(p->populations[0]->current_gen, ImigrationBuffer, sizeof(gene)*population_part*GENOME_LENGTH, cudaMemcpyHostToDevice);
+    // Free the recieve - new will be created in the next iteration
+    free(ImigrationRequest);
+    ImigrationRequest = NULL;
+  }
 }
 
-void pga_migrate_between(pga_t *p, population_t *pop_org, population_t *pop_target, float pct) {
-  //MPI rank 0
-  //cudaMemcpy(s_buf_h,s_buf_d,size,cudaMemcpyDeviceToHost);
- // MPI_Send(s_buf_h,size,MPI_CHAR,1,100,MPI_COMM_WORLD);
 
-  //MPI rank 1
-  //MPI_Recv(r_buf_h,size,MPI_CHAR,0,100,MPI_COMM_WORLD, &status);
-  //cudaMemcpy(r_buf_d,r_buf_h,size,cudaMemcpyHostToDevice);
+void pga_emigration(pga_t *p, int population_part) {
+  MPI_Status status = {0};
+  int send_to_rank = rand() % mpi_device_count;
+  int flag = 0;
+
+  // Random a node to send a 'boat' with a part of our population
+  while (send_to_rank == mpi_myrank) {
+    send_to_rank = rand() % mpi_device_count;
+  }
+
+  // If we did send our emigrants, we need to wait until it completes
+  if (EmigrationRequest != NULL) {
+    // Check if it has been completed
+    // Test if the recieve has something
+    MPI_Test(ImigrationRequest, &flag, &status);
+
+    if (!flag) {
+      // We can't send yet, will try in the next iteration
+      return;
+    }
+
+    free(EmigrationRequest);
+    EmigrationRequest = NULL;
+  }
+
+  EmigrationRequest = (MPI_Request *)malloc(sizeof(MPI_Request));
+
+  cudaMemcpy(EmigrationBuffer, p->populations[0]->current_gen, sizeof(gene)*population_part*GENOME_LENGTH, cudaMemcpyDeviceToHost);
+
+  // Send our people!
+  MPI_Isend(EmigrationBuffer, GENOME_LENGTH*population_part, MPI_FLOAT, send_to_rank, MPI_TAG_EMIGRATION_INIT, MPI_COMM_WORLD, EmigrationRequest);
 }
 
 void pga_run(pga_t *p, unsigned n, float value) {
@@ -380,29 +430,46 @@ void pga_run(pga_t *p, unsigned n, float value) {
 }
 
 void pga_run_islands(pga_t *p, unsigned n, float value, unsigned m, float pct) {
-	unsigned sub_count = 0;
+  unsigned sub_count = 0;
+  int population_to_migrate = (int)((float)POPULATION_SIZE * pct / 100.f);
 
-	if (p->p_count == 0) {
-		return;
-	}
+  if (p->p_count == 0) {
+    return;
+  }
 
   if (mpi_device_count < 2) {
     printf("\nNeed at least two MPI nodes to run on islands!");
     return;
   }
-	
-	for (int i = 0; (unsigned)i < n; ++i,++sub_count) {
-		pga_fill_random_values(p, p->populations[0]);
-		pga_evaluate(p, p->populations[0]);
-		pga_crossover(p, p->populations[0], TOURNAMENT);
-		pga_mutate(p, p->populations[0]);
-		pga_swap_generations(p, p->populations[0]);
-		
+
+  EmigrationBuffer = malloc(sizeof(gene)*GENOME_LENGTH*population_to_migrate);
+  ImigrationBuffer = malloc(sizeof(gene)*GENOME_LENGTH*population_to_migrate);
+
+  for (int i = 0; (unsigned)i < n; ++i,++sub_count) {
+    pga_fill_random_values(p, p->populations[0]);
+    pga_evaluate(p, p->populations[0]);
+    pga_crossover(p, p->populations[0], TOURNAMENT);
+    pga_mutate(p, p->populations[0]);
+    pga_swap_generations(p, p->populations[0]);
+
     if (sub_count >= m) {
       sub_count = 0;
-      pga_migrate(p, pct);
+      pga_emigration(p, population_to_migrate);
     }
-	}
 
-	pga_evaluate(p, p->populations[0]);
+    pga_imigration(p, population_to_migrate);
+  }
+
+  pga_evaluate(p, p->populations[0]);
+
+  if (EmigrationRequest != NULL) {
+    MPI_Cancel(EmigrationRequest);
+  }
+  
+  if (ImigrationRequest != NULL) {
+    MPI_Cancel(ImigrationRequest);
+  }
+
+  free(EmigrationBuffer);
+  free(ImigrationBuffer);
 }

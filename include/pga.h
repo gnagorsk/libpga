@@ -20,8 +20,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
 
+#define GENOME_LENGTH 1000
+#define POPULATION_SIZE 10000
 
 typedef struct pga pga_t;
 typedef struct population population_t;
@@ -60,7 +61,7 @@ void pga_deinit(pga_t *);
 /*
  * creates a new population (subpopulation) in a given pga instance
  */
-population_t *pga_create_population(pga_t *, unsigned long size, unsigned genome_len, enum population_type type);
+population_t *pga_create_population(pga_t *, enum population_type type);
 
 /*
  * XXX function pointers need to be prefixed with __device__
@@ -106,13 +107,13 @@ void pga_crossover(pga_t *, population_t *, enum crossover_selection_type);
 void pga_crossover_all(pga_t *, enum crossover_selection_type);
 
 /*
- * randomly migrate top %pct between populations
+ * migrate top elements from our population to a random node
  */
-void pga_migrate(pga_t *, float pct);
+void pga_emigration(pga_t *p, int population_part);
 /*
- * migrate top %pct from one population to another
+ * check if a population is imigrating and let it in
  */
-void pga_migrate_between(pga_t *, population_t *, population_t *, float pct);
+void pga_imigration(pga_t *p, int population_part);
 
 /*
  * mutate individuals in population(s)
