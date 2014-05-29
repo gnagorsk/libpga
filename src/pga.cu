@@ -112,11 +112,9 @@ void __cleanup_population(population_t *p) {
 
 __device__ void __default_mutate(gene *g, float *rand, unsigned genome_len) {
 	float chance = 0.01;
-	for (int i = 0; i < genome_len; ++i) {
-		if (rand[i] < chance) {
-			g[i] = rand[i+1 == genome_len ? 0 : i];
-			chance /= 10;
-		}
+	int gene_to_mutate = rand[0] * genome_len;
+	if (rand[1] <= chance) {
+		g[gene_to_mutate] = rand[2];
 	}
 }
 
