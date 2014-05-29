@@ -58,6 +58,7 @@ struct pga {
 };
 
 #define GET_GENOME(genomes,id,len) (genomes + (id*len))
+#define COPY_GENOME(target, source, length) for(int __i = 0; __i < length; ++__i) target[__i] = source[__i];
 
 typedef void (*generate_f)(pga_t *, population_t *);
 
@@ -234,20 +235,18 @@ gene **pga_get_best_top_all(pga_t *p, unsigned length) {
 }
 
 __global__ void __g_evaluate(obj_f obj, gene *genomes, float *score, const unsigned long p_size, const int genome_len) {
-	int i, index = threadIdx.x + blockIdx.x * blockDim.x;
+	int index = threadIdx.x + blockIdx.x * blockDim.x;
 	if (index >= p_size) return;
 	
 	extern __shared__ float shared_genomes[];
 
-	for (i = 0; i < genome_len; ++i) {
-		GET_GENOME(shared_genomes, threadIdx.x, genome_len)[i] = GET_GENOME(genomes, index, genome_len)[i];
-	}
+	COPY_GENOME(GET_GENOME(shared_genomes, threadIdx.x, genome_len), GET_GENOME(genomes, index, genome_len), genome_len);
 
 	score[index] = obj(GET_GENOME(shared_genomes, threadIdx.x, genome_len), genome_len);
 }
 
 void pga_evaluate(pga_t *p, population_t *pop) {
-	__g_evaluate<<<p->blocks, p->threads, p->threads*pop->genome_len*sizeof(float)>>>(p->objective, pop->current_gen, pop->score, pop->size, pop->genome_len);
+	__g_evaluate<<<p->blocks, p->threads, p->threads*pop->genome_len*sizeof(gene)>>>(p->objective, pop->current_gen, pop->score, pop->size, pop->genome_len);
 
 	CCE(cudaPeekAtLastError());
 	CCE(cudaDeviceSynchronize());
@@ -276,27 +275,25 @@ __device__ int tournament_selection(float *score, float *rand, int size) {
 }
 
 __global__ void __g_crossover(crossover_f crossover, gene *newg, gene *oldg, float *score, float *rand, int genome_len, unsigned long p_size) {
-	int i, index = threadIdx.x + blockIdx.x * blockDim.x;
+	int index = threadIdx.x + blockIdx.x * blockDim.x;
 	if (index >= p_size) return;
 	
 	float *my_rand = rand + (index*genome_len);
 	extern __shared__ float shared_genomes[];
 
-	for (i = 0; i < genome_len; ++i) {
-		GET_GENOME(shared_genomes, threadIdx.x, genome_len)[i] = GET_GENOME(newg, index, genome_len)[i];
-	}
+	COPY_GENOME(GET_GENOME(shared_genomes, threadIdx.x, genome_len), GET_GENOME(newg, index, genome_len), genome_len);
+	
 	// TODO: figure a way to select genomes from shared memory
 	crossover(
 		GET_GENOME(oldg, tournament_selection(score, my_rand, p_size), genome_len), 
 		GET_GENOME(oldg, tournament_selection(score, my_rand+TOURNAMENT_POPULATION, p_size), genome_len), 
 		GET_GENOME(shared_genomes, threadIdx.x, genome_len), my_rand, genome_len);
-	for (i = 0; i < genome_len; ++i) {
-		GET_GENOME(newg, index, genome_len)[i] = GET_GENOME(shared_genomes, threadIdx.x, genome_len)[i];
-	}
+	
+	COPY_GENOME(GET_GENOME(newg, index, genome_len), GET_GENOME(shared_genomes, threadIdx.x, genome_len), genome_len);
 }
 
 void pga_crossover(pga_t *p, population_t *pop, enum crossover_selection_type type) {
-	__g_crossover<<<p->blocks, p->threads, p->threads*pop->genome_len*sizeof(float)>>>(p->crossover, pop->next_gen, pop->current_gen, pop->score, pop->rand, pop->genome_len, pop->size);
+	__g_crossover<<<p->blocks, p->threads, p->threads*pop->genome_len*sizeof(gene)>>>(p->crossover, pop->next_gen, pop->current_gen, pop->score, pop->rand, pop->genome_len, pop->size);
 	CCE(cudaPeekAtLastError());
 	CCE(cudaDeviceSynchronize());
 }
@@ -308,24 +305,20 @@ void pga_crossover_all(pga_t *p, enum crossover_selection_type type) {
 }
 
 __global__ void __g_mutate(mutate_f mutate_func, gene *genomes, float* rand, unsigned long p_size, unsigned genome_len) {
-	int i, index = threadIdx.x + blockIdx.x * blockDim.x;
+	int index = threadIdx.x + blockIdx.x * blockDim.x;
 	if (index >= p_size) return;
 	
 	extern __shared__ float shared_genomes[];
 	
-	for (i = 0; i < genome_len; ++i) {
-		GET_GENOME(shared_genomes, threadIdx.x, genome_len)[i] = GET_GENOME(genomes, index, genome_len)[i];
-	}
-	
+	COPY_GENOME(GET_GENOME(shared_genomes, threadIdx.x, genome_len), GET_GENOME(genomes, index, genome_len), genome_len);
+
 	mutate_func(GET_GENOME(shared_genomes, threadIdx.x, genome_len), rand + (index*genome_len), genome_len);
 	
-	for (i = 0; i < genome_len; ++i) {
-		GET_GENOME(genomes, index, genome_len)[i] = GET_GENOME(shared_genomes, threadIdx.x, genome_len)[i];
-	}	
+	COPY_GENOME(GET_GENOME(genomes, index, genome_len), GET_GENOME(shared_genomes, threadIdx.x, genome_len), genome_len);
 }
 
 void pga_mutate(pga_t *p, population_t *pop) {
-	__g_mutate<<<p->blocks, p->threads, p->threads*pop->genome_len*sizeof(float)>>>(p->mutate, pop->next_gen, pop->rand, pop->size, pop->genome_len);
+	__g_mutate<<<p->blocks, p->threads, p->threads*pop->genome_len*sizeof(gene)>>>(p->mutate, pop->next_gen, pop->rand, pop->size, pop->genome_len);
 	CCE(cudaPeekAtLastError());
 	CCE(cudaDeviceSynchronize());
 }
