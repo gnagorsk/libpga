@@ -24,6 +24,9 @@
 #include <mpi.h>
 #include <string.h>
 
+#define MPI_COMM_WORLD  ((MPI_Comm)0x44000000)
+#define MPI_FLOAT       ((MPI_Datatype)0x4c00040a)
+
 #define CCE(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, char *file, int line, bool abort=true)
 {
