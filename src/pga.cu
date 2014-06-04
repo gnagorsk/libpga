@@ -24,7 +24,6 @@
 #include <mpi.h>
 #include <string.h>
 
-
 #define CCE(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, char *file, int line, bool abort=true)
 {
@@ -144,9 +143,9 @@ pga_t *pga_init(int *argc, char ***argv) {
   /* Initialize the MPI library */
   MPI_Init(argc, argv);
 
-  MPI_Comm_rank(((int)0x44000000), &mpi_myrank);
+  MPI_Comm_rank((MPI_Comm)(0x44000000), &mpi_myrank);
 
-  MPI_Comm_size(((int)0x44000000), &mpi_device_count);
+  MPI_Comm_size(((MPI_Comm)0x44000000), &mpi_device_count);
 
 	pga_t *ret = (pga_t*) malloc(sizeof(pga_t));
 	if (ret == NULL) {
@@ -361,7 +360,7 @@ void pga_imigration(pga_t *p, int population_part) {
   if (ImigrationRequest == NULL) {
     ImigrationRequest = (MPI_Request *)malloc(sizeof(MPI_Request));
     memset(ImigrationBuffer, 0, sizeof(MPI_Request));
-    MPI_Irecv(ImigrationBuffer, GENOME_LENGTH * population_part, ((int)0x4c00040a), MPI_ANY_SOURCE, MPI_ANY_TAG, ((int)0x44000000), ImigrationRequest);
+    MPI_Irecv(ImigrationBuffer, GENOME_LENGTH * population_part, ((MPI_Datatype)0x4c00040a), MPI_ANY_SOURCE, MPI_ANY_TAG, ((MPI_Comm)0x44000000), ImigrationRequest);
   }
 
   // Test if the recieve has something
@@ -407,7 +406,7 @@ void pga_emigration(pga_t *p, int population_part) {
   cudaMemcpy(EmigrationBuffer, p->populations[0]->current_gen, sizeof(gene)*population_part*GENOME_LENGTH, cudaMemcpyDeviceToHost);
 
   // Send our people!
-  MPI_Isend(EmigrationBuffer, GENOME_LENGTH*population_part, ((int)0x4c00040a), send_to_rank, MPI_TAG_EMIGRATION_INIT, ((int)0x44000000), EmigrationRequest);
+  MPI_Isend(EmigrationBuffer, GENOME_LENGTH*population_part, ((MPI_Datatype)0x4c00040a), send_to_rank, MPI_TAG_EMIGRATION_INIT, ((MPI_Comm)0x44000000), EmigrationRequest);
 }
 
 void pga_run(pga_t *p, unsigned n, float value) {
