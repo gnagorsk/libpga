@@ -24,6 +24,22 @@
 #include <mpi.h>
 #include <string.h>
 
+#define ITEM_COUNT 6
+#define MAX_ITEM_COUNT 2
+#define KNAPSACK_CAPACITY 10.0
+__constant__ float item_value[ITEM_COUNT] =  {75, 150, 250, 35, 10, 100};
+__constant__ float item_weight[ITEM_COUNT] = {7,  8,   6,   4,  3,  9};
+
+__device__ float objf(gene *g, unsigned genome_len) {
+	float s = 0, w = 0;
+	for (int i = 0; i < genome_len; ++i) {
+		int count = g[i]*MAX_ITEM_COUNT;
+		s += item_value[i] * count;
+		w += item_weight[i] * count;
+	}
+	return w <= KNAPSACK_CAPACITY ? s : (KNAPSACK_CAPACITY-w);
+}
+
 #define CCE(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, char *file, int line, bool abort=true)
 {
@@ -135,6 +151,7 @@ __device__ void __default_crossover(gene *p1, gene *p2, gene *c, float *rand, un
 
 __device__ crossover_f __crossover = __default_crossover;
 __device__ mutate_f __mutate = __default_mutate;
+__device__ obj_f __ofunction = objf;
 
 int mpi_myrank = 0;
 int mpi_device_count = 0;
@@ -160,6 +177,8 @@ pga_t *pga_init(int *argc, char ***argv) {
 	pga_set_mutate_function(ret, (mutate_f)func);	
 	cudaMemcpyFromSymbol( &func , __crossover , sizeof(crossover_f));
 	pga_set_crossover_function(ret, (crossover_f)func);
+  cudaMemcpyFromSymbol( &func , __ofunction, sizeof(obj_f));
+  pga_set_objective_function(ret, (obj_f)func);
 
 	return ret;
 }
@@ -346,14 +365,14 @@ void pga_swap_generations(pga_t *p, population_t *pop) {
 	pop->current_gen = t;
 }
 
-MPI_Request *ImigrationRequest;
+/*MPI_Request *ImigrationRequest;
 MPI_Request *EmigrationRequest;
 
 void *ImigrationBuffer;
-void *EmigrationBuffer;
+void *EmigrationBuffer;*/
 
 void pga_imigration(pga_t *p, int population_part) {
-  MPI_Status status = {0};
+  /*MPI_Status status = {0};
   int flag = 0;
 
   // If there is no recieve awaiting - create it
@@ -372,12 +391,12 @@ void pga_imigration(pga_t *p, int population_part) {
     // Free the recieve - new will be created in the next iteration
     free(ImigrationRequest);
     ImigrationRequest = NULL;
-  }
+  }*/
 }
 
 
 void pga_emigration(pga_t *p, int population_part) {
-  MPI_Status status = {0};
+  /*MPI_Status status = {0};
   int send_to_rank = rand() % mpi_device_count;
   int flag = 0;
 
@@ -406,14 +425,14 @@ void pga_emigration(pga_t *p, int population_part) {
   cudaMemcpy(EmigrationBuffer, p->populations[0]->current_gen, sizeof(gene)*population_part*GENOME_LENGTH, cudaMemcpyDeviceToHost);
 
   // Send our people!
-  MPI_Isend(EmigrationBuffer, GENOME_LENGTH*population_part, MPI_FLOAT, send_to_rank, MPI_TAG_EMIGRATION_INIT, MPI_COMM_WORLD, EmigrationRequest);
+  MPI_Isend(EmigrationBuffer, GENOME_LENGTH*population_part, MPI_FLOAT, send_to_rank, MPI_TAG_EMIGRATION_INIT, MPI_COMM_WORLD, EmigrationRequest);*/
 }
 
 void pga_run(pga_t *p, unsigned n, float value) {
 	if (p->p_count == 0) {
 		return;
 	}
-	
+
 	for (int i = 0; (unsigned)i < n; ++i) {
 		pga_fill_random_values(p, p->populations[0]);
 		pga_evaluate(p, p->populations[0]);
@@ -426,7 +445,7 @@ void pga_run(pga_t *p, unsigned n, float value) {
 }
 
 void pga_run_islands(pga_t *p, unsigned n, float value, unsigned m, float pct) {
-  unsigned sub_count = 0;
+  /*unsigned sub_count = 0;
   int population_to_migrate = (int)((float)POPULATION_SIZE * pct / 100.f);
 
   if (p->p_count == 0) {
@@ -467,5 +486,5 @@ void pga_run_islands(pga_t *p, unsigned n, float value, unsigned m, float pct) {
   }
 
   free(EmigrationBuffer);
-  free(ImigrationBuffer);
+  free(ImigrationBuffer);*/
 }

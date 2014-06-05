@@ -18,52 +18,32 @@
 #include <limits.h>
 #include <float.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-#define ITEM_COUNT 6
-#define MAX_ITEM_COUNT 2
-#define KNAPSACK_CAPACITY 10.0
-__constant__ float item_value[ITEM_COUNT] =  {75, 150, 250, 35, 10, 100};
-__constant__ float item_weight[ITEM_COUNT] = {7,  8,   6,   4,  3,  9};
 
-__device__ float objf(gene *g, unsigned genome_len) {
-	float s = 0, w = 0;
-	for (int i = 0; i < genome_len; ++i) {
-		int count = g[i]*MAX_ITEM_COUNT;
-		s += item_value[i] * count;
-		w += item_weight[i] * count;
-	}
-	return w <= KNAPSACK_CAPACITY ? s : (KNAPSACK_CAPACITY-w);
-}
-
-__device__ obj_f ofunction = objf;
-
-#define ISLANDS
+//#define ISLANDS
 
 int main(int argc, char **argv) {
 	pga_t *p = pga_init(&argc, &argv);
 
-	population_t *pop = pga_create_population(p, 100, ITEM_COUNT, RANDOM_POPULATION);
+	population_t *pop = pga_create_population(p, RANDOM_POPULATION);
 
-	void *func;
-	cudaMemcpyFromSymbol( &func , ofunction , sizeof(obj_f));
-	pga_set_objective_function(p, (obj_f)func);
-	
 #ifdef ISLANDS
 	pga_run_islands(p, 5, 0.f, 10, 30.f);
 #else
   pga_run(p, 5, 0.f);
 #endif
-	
+
 	gene* g = pga_get_best(p, pop);
-	
+
 	for (int i = 0; i < ITEM_COUNT; ++i) {
 		printf("%u ", (int)(g[i]*MAX_ITEM_COUNT));
 	}
-	
+
 	free(g);
 	printf("\n");
-	
+
 	pga_deinit(p);
-	
+
 	return 0;
 }

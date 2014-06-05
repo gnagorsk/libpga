@@ -21,6 +21,10 @@
 extern "C" {
 #endif
 
+#define ITEM_COUNT 6
+#define MAX_ITEM_COUNT 2
+#define KNAPSACK_CAPACITY 10.0
+
 #define GENOME_LENGTH 1000
 #define POPULATION_SIZE 10000
 
