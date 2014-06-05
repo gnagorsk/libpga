@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
   pga_set_imigration_function(p, pga_imigration);
 
   if (mpi_nodes_count > 1) {
-    pga_run_islands(p, 100, 0.f, 1000, 30.f);
+    pga_run_islands(p, 300, 0.f, 5, 30.f);
   } else {
     pga_run(p, 100, 0.f);
   }
