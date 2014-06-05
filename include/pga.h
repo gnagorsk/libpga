@@ -54,7 +54,7 @@ typedef void (*crossover_f)(gene *, gene *, gene *, float *, unsigned);
 /*
  * initializes the pga solver
  */
-pga_t *pga_init();
+pga_t *pga_init(int random_salt);
 
 /*
  * performs cleanup and free's all initialized data

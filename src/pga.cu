@@ -150,13 +150,13 @@ __device__ crossover_f __crossover = __default_crossover;
 __device__ mutate_f __mutate = __default_mutate;
 __device__ obj_f __object = __default_objf;
 
-pga_t *pga_init() {
+pga_t *pga_init(int random_salt) {
 	pga_t *ret = (pga_t*) malloc(sizeof(pga_t));
 	if (ret == NULL) {
 		return NULL;
 	}
 	curandCreateGenerator(&randGen, CURAND_RNG_PSEUDO_DEFAULT);
-	curandSetPseudoRandomGeneratorSeed(randGen, time(NULL));
+	curandSetPseudoRandomGeneratorSeed(randGen, time(NULL) * random_salt + random_salt);
 	ret->p_count = 0;
 
 	void *func;

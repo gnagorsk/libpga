@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &mpi_my_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_nodes_count);
 
-  pga_t *p = pga_init();
+  pga_t *p = pga_init(mpi_my_rank);
 
 	population_t *pop = pga_create_population(p, 10000, GENOME_LENGTH, RANDOM_POPULATION);
 
@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
   pga_set_imigration_function(p, pga_imigration);
 
   if (mpi_nodes_count > 1) {
-    pga_run_islands(p, 300, 0.f, 5, 30.f);
+    pga_run_islands(p, 60, 0.f, 5, 30.f);
   } else {
     pga_run(p, 100, 0.f);
   }
