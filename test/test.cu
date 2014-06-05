@@ -18,32 +18,26 @@
 #include <limits.h>
 #include <float.h>
 #include <stdio.h>
+#include <mpi.h>
 
 #define GENOME_LENGTH 100
 
-__device__ float objf(gene *g, unsigned length) {
-	float s = 0;
-	for (int i = 0; i < length; ++i) {
-		s += g[i];
-	}
-	return s;
-}
+int mpi_nodes_count;
+int mpi_my_rank;
 
-__device__ obj_f ofunction = objf;
+int main(int argc, char **argv) {
+  MPI_Init(&argc, &argv);
 
-int main() {
-	pga_t *p = pga_init();
+  pga_t *p = pga_init();
 
 	population_t *pop = pga_create_population(p, 10000, GENOME_LENGTH, RANDOM_POPULATION);
 
-	void *func;
-	cudaMemcpyFromSymbol( &func , ofunction , sizeof(obj_f));
-	pga_set_objective_function(p, (obj_f)func);
-	
 	pga_run(p, 100, 0.f);
 	
 	pga_get_best(p, pop);
 	
 	pga_deinit(p);
+
+  MPI_Finalize();
 	return 0;
 }

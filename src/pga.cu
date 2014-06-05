@@ -126,8 +126,17 @@ __device__ void __default_crossover(gene *p1, gene *p2, gene *c, float *rand, un
 	}
 }
 
+__device__ float __default_objf(gene *g, unsigned length) {
+	float s = 0;
+	for (int i = 0; i < length; ++i) {
+		s += g[i];
+	}
+	return s;
+}
+
 __device__ crossover_f __crossover = __default_crossover;
 __device__ mutate_f __mutate = __default_mutate;
+__device__ obj_f __object = __default_objf;
 
 pga_t *pga_init() {
 	pga_t *ret = (pga_t*) malloc(sizeof(pga_t));
@@ -143,6 +152,8 @@ pga_t *pga_init() {
 	pga_set_mutate_function(ret, (mutate_f)func);	
 	cudaMemcpyFromSymbol( &func , __crossover , sizeof(crossover_f));
 	pga_set_crossover_function(ret, (crossover_f)func);
+  cudaMemcpyFromSymbol( &func , __object , sizeof(obj_f));
+	pga_set_objective_function(ret, (obj_f)func);
 	
 	return ret;
 }
