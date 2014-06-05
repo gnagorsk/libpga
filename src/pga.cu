@@ -55,7 +55,19 @@ struct pga {
 	crossover_f crossover;
 	unsigned long blocks;
 	unsigned long threads;
+  unsigned long population_size;
+
+  emigration_f emigration_func;
+  imigration_f imigration_func;
 };
+
+void pga_set_imigration_function(pga_t *p, imigration_f im_func) {
+  p->imigration_func = im_func;
+}
+
+void pga_set_emigration_function(pga_t *p, emigration_f em_func) {
+  p->emigration_func = em_func;
+}
 
 #define GET_GENOME(genomes,id,len) (genomes + (id*len))
 #define COPY_GENOME(target, source, length) for(int __i = 0; __i < length; ++__i) target[__i] = source[__i];
@@ -171,7 +183,7 @@ void pga_deinit(pga_t *p) {
 
 population_t *pga_create_population(pga_t *p, unsigned long size, unsigned genome_len, enum population_type type) {
 	population_t *pop = NULL;
-
+  p->population_size = size;
 	if (p->p_count == MAX_POPULATIONS) {
 		return NULL;	
 	}
@@ -342,11 +354,11 @@ void pga_swap_generations(pga_t *p, population_t *pop) {
 	pop->current_gen = t;
 }
 
-void pga_migrate(pga_t *p, float pct) {
+void pga_emigrate(pga_t *p, float pct) {
 	//TODO: grzesiu
 }
 
-void pga_migrate_between(pga_t *p, population_t *pop_org, population_t *pop_target, float pct) {
+void pga_imigrate(pga_t *p, float pct) {
 	//TODO: grzesiu
 }
 
@@ -367,6 +379,49 @@ void pga_run(pga_t *p, unsigned n, float value) {
 	pga_evaluate(p, p->populations[0]);
 }
 
+pga_t *migrationP;
+void *imigrationBuffer;
+void *emigrationBuffer;
+int migrationSize;
+
+void imigration_callback() {
+  cudaMemcpy(migrationP->populations[0]->current_gen, imigrationBuffer, migrationSize, cudaMemcpyHostToDevice);
+}
+
+void emigration_callback() {
+  cudaMemcpy(emigrationBuffer, migrationP->populations[0]->current_gen, migrationSize, cudaMemcpyDeviceToHost);
+}
+
 void pga_run_islands(pga_t *p, unsigned n, float value, unsigned m, float pct) {
-	//TODO: grzesiu	
+  int subCnt = 0;
+  int toSend = ceil(((float)p->population_size * pct) / 100.f);
+
+	if (p->p_count == 0) {
+		return;
+	}
+
+  migrationSize = toSend*sizeof(float)*p->populations[0]->genome_len;
+  migrationP = p;
+  imigrationBuffer = malloc(migrationSize);
+  emigrationBuffer = malloc(migrationSize);
+	
+	for (unsigned i = 0; i < n; ++i) {
+		pga_fill_random_values(p, p->populations[0]);
+		pga_evaluate(p, p->populations[0]);
+		pga_crossover(p, p->populations[0], TOURNAMENT);
+		pga_mutate(p, p->populations[0]);
+		pga_swap_generations(p, p->populations[0]);
+
+    p->imigration_func(imigrationBuffer,toSend*sizeof(float)*p->populations[0]->genome_len,imigration_callback);
+		subCnt++;
+
+    if (subCnt>=m) {
+      subCnt = 0;
+      p->emigration_func(emigrationBuffer, migrationSize, emigration_callback);
+    }
+	}
+
+  free(imigrationBuffer);
+
+	pga_evaluate(p, p->populations[0]);
 }

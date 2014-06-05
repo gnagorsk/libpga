@@ -163,3 +163,10 @@ libpga/DebugTest/link.9400-rc.read.1.tlog
 libpga/DebugTest/link.9400-rc.write.1.tlog
 libpga/DebugTest/link.9400.read.1.tlog
 libpga/DebugTest/link.9400.write.1.tlog
+libpga/DebugTest/link.3960-cvtres.read.1.tlog
+libpga/DebugTest/link.3960-cvtres.write.1.tlog
+libpga/DebugTest/link.3960-rc.read.1.tlog
+libpga/DebugTest/link.3960-rc.write.1.tlog
+libpga/DebugTest/link.3960.read.1.tlog
+libpga/DebugTest/link.3960.write.1.tlog
+libpga/DebugTest2/libpga.Build.CppClean.log

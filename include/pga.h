@@ -20,8 +20,12 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
 
+typedef void (*in_buffer_ready)(void);
+typedef void (*out_buffer_ready)(void);
+
+typedef void (*emigration_f)(void *buffer, int size_in_bytes, in_buffer_ready callback);
+typedef void (*imigration_f)(void *buffer, int size_in_bytes, out_buffer_ready callback);
 
 typedef struct pga pga_t;
 typedef struct population population_t;
@@ -61,6 +65,12 @@ void pga_deinit(pga_t *);
  * creates a new population (subpopulation) in a given pga instance
  */
 population_t *pga_create_population(pga_t *, unsigned long size, unsigned genome_len, enum population_type type);
+
+/*
+ * Imigration and emigration functions
+ */
+void pga_set_imigration_function(pga_t *, imigration_f);
+void pga_set_emigration_function(pga_t *, emigration_f);
 
 /*
  * XXX function pointers need to be prefixed with __device__
