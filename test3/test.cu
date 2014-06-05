@@ -19,7 +19,7 @@
 #include <float.h>
 #include <stdio.h>
 
-#define MAX_CITY_COUNT 110
+#define MAX_CITY_COUNT 10
 
 __constant__ float city_matrix[MAX_CITY_COUNT][MAX_CITY_COUNT] = {};
 
@@ -82,7 +82,7 @@ int main() {
 
 	
 	
-	population_t *pop = pga_create_population(p, 1000, city_count, RANDOM_POPULATION);
+	population_t *pop = pga_create_population(p, 100, city_count, RANDOM_POPULATION);
 	
 	void *func;
 	cudaMemcpyFromSymbol(&func ,ofunction ,sizeof(obj_f));

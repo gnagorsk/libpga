@@ -19,7 +19,7 @@
 #include <float.h>
 #include <stdio.h>
 
-#define GENOME_LENGTH 1000
+#define GENOME_LENGTH 100
 
 __device__ float objf(gene *g, unsigned length) {
 	float s = 0;
@@ -34,7 +34,7 @@ __device__ obj_f ofunction = objf;
 int main() {
 	pga_t *p = pga_init();
 
-	population_t *pop = pga_create_population(p, 40000, GENOME_LENGTH, RANDOM_POPULATION);
+	population_t *pop = pga_create_population(p, 10000, GENOME_LENGTH, RANDOM_POPULATION);
 
 	void *func;
 	cudaMemcpyFromSymbol( &func , ofunction , sizeof(obj_f));

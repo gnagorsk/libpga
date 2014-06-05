@@ -150,7 +150,7 @@ pga_t *pga_init() {
 void pga_deinit(pga_t *p) {
 	curandDestroyGenerator(randGen);
 	
-	int i;
+	unsigned i;
 	for (i = 0; i < p->p_count; ++i) {
 		__cleanup_population(p->populations[i]);
 		free(p->populations[i]);
@@ -181,7 +181,7 @@ population_t *pga_create_population(pga_t *p, unsigned long size, unsigned genom
 	p->populations[p->p_count++] = pop;
 	
 	p->threads = MAX_THREADS;
-	p->blocks = ceil(size / (float)p->threads);	
+	p->blocks = (unsigned long)ceil(size / (float)p->threads);	
 	__fill_population(p, pop, type);
 	return pop;
 }
@@ -203,7 +203,7 @@ gene *pga_get_best(pga_t *p, population_t *pop) {
 	cudaMemcpy(host_score, pop->score, sizeof(float)*pop->size, cudaMemcpyDeviceToHost);
 	float best = 0;
 	int best_id = -1;
-	for (int i = 0; i < pop->size; ++i) {
+	for (unsigned i = 0; i < pop->size; ++i) {
 		if (best_id == -1 || best < host_score[i]) {
 			best = host_score[i];
 			best_id = i;
@@ -249,7 +249,7 @@ void pga_evaluate(pga_t *p, population_t *pop) {
 }
 
 void pga_evaluate_all(pga_t *p) {
-	for (int i = 0; i < p->p_count; ++i) {
+	for (unsigned i = 0; i < p->p_count; ++i) {
 		pga_evaluate(p, p->populations[i]);
 	}
 }
@@ -295,7 +295,7 @@ void pga_crossover(pga_t *p, population_t *pop, enum crossover_selection_type ty
 }
 
 void pga_crossover_all(pga_t *p, enum crossover_selection_type type) {
-	for (int i = 0; i < p->p_count; ++i) {
+	for (unsigned i = 0; i < p->p_count; ++i) {
 		pga_crossover(p, p->populations[i], TOURNAMENT);
 	}
 }
@@ -320,7 +320,7 @@ void pga_mutate(pga_t *p, population_t *pop) {
 }
 
 void pga_mutate_all(pga_t *p) {
-	for (int i = 0; i < p->p_count; ++i) {
+	for (unsigned i = 0; i < p->p_count; ++i) {
 		pga_mutate(p, p->populations[i]);
 	}
 }
@@ -344,7 +344,7 @@ void pga_run(pga_t *p, unsigned n, float value) {
 		return;
 	}
 	
-	for (int i = 0; i < n; ++i) {
+	for (unsigned i = 0; i < n; ++i) {
 		pga_fill_random_values(p, p->populations[0]);
 		pga_evaluate(p, p->populations[0]);
 		pga_crossover(p, p->populations[0], TOURNAMENT);
