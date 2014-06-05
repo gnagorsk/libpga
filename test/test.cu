@@ -27,6 +27,8 @@ int mpi_my_rank;
 
 int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
+  MPI_Comm_rank(MPI_COMM_WORLD, &mpi_my_rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &mpi_nodes_count);
 
   pga_t *p = pga_init();
 
