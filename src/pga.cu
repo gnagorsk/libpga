@@ -186,8 +186,8 @@ void pga_deinit(pga_t *p) {
 	free(p);
 
   // if crashes - delete so no one will know ;>
-  //free(imigrationBuffer);
-  //free(emigrationBuffer);
+  free(imigrationBuffer);
+  free(emigrationBuffer);
 }
 
 population_t *pga_create_population(pga_t *p, unsigned long size, unsigned genome_len, enum population_type type) {
