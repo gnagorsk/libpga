@@ -114,13 +114,17 @@ int main(int argc, char **argv) {
 	
 	pga_get_best(p, pop);
 	
-  MPI_Cancel(EmigrationRequest);
-  MPI_Cancel(ImigrationRequest);
+  if (EmigrationRequest != NULL) {
+    MPI_Cancel(EmigrationRequest);
+    free(EmigrationRequest);
+  }
+  
+  if (ImigrationRequest != NULL) {
+    MPI_Cancel(ImigrationRequest);
+    free(ImigrationRequest);
+  }
 
 	pga_deinit(p);
-
-  free(ImigrationRequest);
-  free(EmigrationRequest);
 
   MPI_Finalize();
 	return 0;
