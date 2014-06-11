@@ -421,7 +421,7 @@ void pga_run_islands(pga_t *p, unsigned n, float value, unsigned m, float pct) {
     }
 	}
 
-  free(imigrationBuffer);
+  //free(imigrationBuffer);
 
 	pga_evaluate(p, p->populations[0]);
 }
