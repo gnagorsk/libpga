@@ -34,6 +34,11 @@ inline void gpuAssert(cudaError_t code, char *file, int line, bool abort=true)
 
 static curandGenerator_t randGen;
 
+pga_t *migrationP;
+void *imigrationBuffer;
+void *emigrationBuffer;
+int migrationSize;
+
 struct population {
 	unsigned long size;
 	unsigned genome_len;
@@ -382,11 +387,6 @@ void pga_run(pga_t *p, unsigned n, float value) {
 
 	pga_evaluate(p, p->populations[0]);
 }
-
-pga_t *migrationP;
-void *imigrationBuffer;
-void *emigrationBuffer;
-int migrationSize;
 
 void imigration_callback() {
   cudaMemcpy(migrationP->populations[0]->current_gen, imigrationBuffer, migrationSize, cudaMemcpyHostToDevice);

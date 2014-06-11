@@ -88,16 +88,18 @@ void pga_emigration(void *buffer, int size_in_bytes, out_buffer_ready callback) 
 }
 
 int main(int argc, char **argv) {
+  unsigned long iterations = 100;
+  unsigned long iterationsPerNode = iterations / mpi_nodes_count;
+  pga_t *p = NULL;
+  population_t *pop = NULL;
+
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &mpi_my_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_nodes_count);
 
-  unsigned long iterations = 100;
-  unsigned long iterationsPerNode = iterations / mpi_nodes_count;
+  p = pga_init(mpi_my_rank);
 
-  pga_t *p = pga_init(mpi_my_rank);
-
-	population_t *pop = pga_create_population(p, 100, GENOME_LENGTH, RANDOM_POPULATION);
+	pop = pga_create_population(p, 100, GENOME_LENGTH, RANDOM_POPULATION);
 
   pga_set_emigration_function(p, pga_emigration);
   pga_set_imigration_function(p, pga_imigration);
