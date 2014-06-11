@@ -179,6 +179,10 @@ void pga_deinit(pga_t *p) {
 		free(p->populations[i]);
 	}
 	free(p);
+
+  // if crashes - delete so no one will know ;>
+  free(imigrationBuffer);
+  free(emigrationBuffer);
 }
 
 population_t *pga_create_population(pga_t *p, unsigned long size, unsigned genome_len, enum population_type type) {
@@ -393,8 +397,8 @@ void emigration_callback() {
 }
 
 void pga_run_islands(pga_t *p, unsigned n, float value, unsigned m, float pct) {
-  int subCnt = 0;
-  int toSend = ceil(((float)p->population_size * pct) / 100.f);
+  unsigned subCnt = 0;
+  int toSend = (int)ceil(((float)p->population_size * pct) / 100.f);
 
 	if (p->p_count == 0) {
 		return;
@@ -420,8 +424,6 @@ void pga_run_islands(pga_t *p, unsigned n, float value, unsigned m, float pct) {
       p->emigration_func(emigrationBuffer, migrationSize, emigration_callback);
     }
 	}
-
-  //free(imigrationBuffer);
 
 	pga_evaluate(p, p->populations[0]);
 }

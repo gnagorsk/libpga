@@ -92,23 +92,31 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &mpi_my_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_nodes_count);
 
+  unsigned long iterations = 100;
+  unsigned long iterationsPerNode = iterations / mpi_nodes_count;
+
   pga_t *p = pga_init(mpi_my_rank);
 
 	population_t *pop = pga_create_population(p, 100, GENOME_LENGTH, RANDOM_POPULATION);
 
   pga_set_emigration_function(p, pga_emigration);
-
   pga_set_imigration_function(p, pga_imigration);
 
   if (mpi_nodes_count > 1) {
-    pga_run_islands(p, 20, 0.f, 3, 30.f);
+    pga_run_islands(p, iterationsPerNode, 0.f, 3, 30.f);
   } else {
-    pga_run(p, 100, 0.f);
+    pga_run(p, iterations, 0.f);
   }
 	
 	pga_get_best(p, pop);
 	
+  MPI_Cancel(EmigrationRequest);
+  MPI_Cancel(ImigrationRequest);
+
 	pga_deinit(p);
+
+  free(ImigrationRequest);
+  free(EmigrationRequest);
 
   MPI_Finalize();
 	return 0;

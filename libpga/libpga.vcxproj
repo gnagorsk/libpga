@@ -46,18 +46,18 @@
     <CudaCompile Include="..\src\pga.cu">
       <FileType>CppCode</FileType>
     </CudaCompile>
-    <CudaCompile Include="..\test2\test.cu">
+    <CudaCompile Include="..\test2\test.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugTest|Win32'">true</ExcludedFromBuild>
       <FileType>CppCode</FileType>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugTest3|Win32'">true</ExcludedFromBuild>
     </CudaCompile>
-    <CudaCompile Include="..\test3\test.cu">
+    <CudaCompile Include="..\test3\test.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugTest|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugTest2|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugTest3|Win32'">false</ExcludedFromBuild>
       <FileType>CppCode</FileType>
     </CudaCompile>
-    <CudaCompile Include="..\test\test.cu">
+    <CudaCompile Include="..\test\test.c">
       <FileType>CppCode</FileType>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugTest3|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugTest2|Win32'">true</ExcludedFromBuild>
