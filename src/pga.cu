@@ -250,6 +250,20 @@ gene *pga_get_best(pga_t *p, population_t *pop) {
 	return solution;
 }
 
+float pga_get_best_val(pga_t *p, population_t *pop) {
+	float *host_score = (float*) malloc(sizeof(float)*pop->size);
+	cudaMemcpy(host_score, pop->score, sizeof(float)*pop->size, cudaMemcpyDeviceToHost);
+	float best = 0;
+	int best_id = -1;
+	for (unsigned i = 0; i < pop->size; ++i) {
+		if (best_id == -1 || best < host_score[i]) {
+			best = host_score[i];
+			best_id = i;
+		}
+	}
+  return best;
+}
+
 gene **pga_get_best_top(pga_t *p, population_t *pop, unsigned length) {
 	return NULL;
 }
@@ -396,7 +410,7 @@ void emigration_callback() {
   cudaMemcpy(emigrationBuffer, migrationP->populations[0]->current_gen, migrationSize, cudaMemcpyDeviceToHost);
 }
 
-void pga_run_islands(pga_t *p, unsigned n, float value, unsigned m, float pct) {
+void pga_run_islands(pga_t *p, unsigned n, float value, unsigned m, float pct, get_best_node get_best) {
   unsigned subCnt = 0;
   int toSend = (int)ceil(((float)p->population_size * pct) / 100.f);
 
@@ -404,7 +418,8 @@ void pga_run_islands(pga_t *p, unsigned n, float value, unsigned m, float pct) {
 		return;
 	}
 
-  migrationSize = toSend*sizeof(float)*p->populations[0]->genome_len;
+  //migrationSize = toSend*sizeof(float)*p->populations[0]->genome_len;
+  migrationSize = sizeof(gene)*p->populations[0]->genome_len*p->populations[0]->size;
   migrationP = p;
   imigrationBuffer = malloc(migrationSize);
   emigrationBuffer = malloc(migrationSize);
@@ -416,12 +431,18 @@ void pga_run_islands(pga_t *p, unsigned n, float value, unsigned m, float pct) {
 		pga_mutate(p, p->populations[0]);
 		pga_swap_generations(p, p->populations[0]);
 
-    p->imigration_func(imigrationBuffer,toSend*sizeof(float)*p->populations[0]->genome_len,imigration_callback);
+    //p->imigration_func(imigrationBuffer,toSend*sizeof(float)*p->populations[0]->genome_len,imigration_callback);
 		subCnt++;
 
     if (subCnt>=m) {
       subCnt = 0;
-      p->emigration_func(emigrationBuffer, migrationSize, emigration_callback);
+      cudaMemcpy(emigrationBuffer, migrationP->populations[0]->current_gen, migrationSize, cudaMemcpyDeviceToHost);
+
+      get_best(pga_get_best_val(p, p->populations[0]), emigrationBuffer, migrationSize);
+      
+      //cudaMemcpy(migrationP->populations[0]->current_gen, imigrationBuffer, migrationSize, cudaMemcpyHostToDevice);
+
+      //p->emigration_func(emigrationBuffer, migrationSize, emigration_callback);
     }
 	}
 

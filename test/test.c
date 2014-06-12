@@ -30,6 +30,8 @@ int mpi_my_rank;
 MPI_Request *ImigrationRequest;
 MPI_Request *EmigrationRequest;
 
+void setBest(float value, void *buff, int size);
+
 void pga_imigration(void *buffer, int size_in_bytes, in_buffer_ready callback) {
   MPI_Status status = {0};
   int flag = 0;
@@ -87,6 +89,33 @@ void pga_emigration(void *buffer, int size_in_bytes, out_buffer_ready callback) 
   MPI_Isend(buffer, size_in_bytes, MPI_BYTE, send_to_rank, 0, MPI_COMM_WORLD, EmigrationRequest);
 }
 
+float *results;
+float send;
+
+void setBest(float value, void *buff, int size) {
+  int best = 0;
+  int i=0;
+
+  send = value;
+  MPI_Allgather(&send, 1, MPI_FLOAT, results, mpi_nodes_count, MPI_FLOAT, MPI_COMM_WORLD);
+
+  for (i=0; i<mpi_nodes_count; i++) {
+    if (results[i] > results[best]) {
+      best = i;
+    }
+  }
+
+  printf("I am %d:", mpi_my_rank);
+
+  //MPI_Bcast(buff, size, MPI_BYTE, best, MPI_COMM_WORLD);
+
+  if (best = mpi_my_rank) {
+    printf(" and I am the best!\n");
+  } else {
+    printf(" ... the best is: %d", best);
+  }
+}
+
 int main(int argc, char **argv) {
   unsigned long iterations = 100;
   unsigned long iterationsPerNode = 0;
@@ -96,6 +125,8 @@ int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &mpi_my_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_nodes_count);
+
+  results = (float*)malloc(sizeof(float)*mpi_nodes_count);
 
   iterationsPerNode = iterations / mpi_nodes_count;
 
@@ -107,7 +138,7 @@ int main(int argc, char **argv) {
   pga_set_imigration_function(p, pga_imigration);
 
   if (mpi_nodes_count > 1) {
-    pga_run_islands(p, iterationsPerNode, 0.f, 3, 30.f);
+    pga_run_islands(p, iterationsPerNode, 0.f, 3, 30.f, (get_best_node)setBest);
   } else {
     pga_run(p, iterations, 0.f);
   }

@@ -23,6 +23,7 @@ extern "C" {
 
 typedef void (*in_buffer_ready)(void);
 typedef void (*out_buffer_ready)(void);
+typedef void (*get_best_node)(float val, void *buff, int size);
 
 typedef void (*emigration_f)(void *buffer, int size_in_bytes, in_buffer_ready callback);
 typedef void (*imigration_f)(void *buffer, int size_in_bytes, out_buffer_ready callback);
@@ -101,6 +102,7 @@ gene *pga_get_best(pga_t *, population_t *);
 gene **pga_get_best_top(pga_t *, population_t *, unsigned length);
 gene *pga_get_best_all(pga_t *);
 gene **pga_get_best_top_all(pga_t *, unsigned length);
+float pga_get_best_val(pga_t *p, population_t *pop);
 
 /*
  * evaluate population(s) using before mentioned objective function
@@ -157,7 +159,7 @@ void pga_run(pga_t *, unsigned n, float value);
  * until n-generations or obj_func(best_genome) == value
  * random migrations happen every m-generations wih top %pct of population
  */
-void pga_run_islands(pga_t *, unsigned n, float value, unsigned m, float pct);
+void pga_run_islands(pga_t *, unsigned n, float value, unsigned m, float pct, get_best_node get_best);
 
 #ifdef __cplusplus
 }
