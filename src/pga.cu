@@ -1,19 +1,3 @@
-/*
- * pga.cu
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 3.0 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; If not, see <http://www.gnu.org/licenses/>.
- */
 #include "pga.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -76,18 +60,24 @@ void pga_set_emigration_function(pga_t *p, emigration_f em_func) {
 
 #define GET_GENOME(genomes,id,len) (genomes + (id*len))
 #define COPY_GENOME(target, source, length) for(int __i = 0; __i < length; ++__i) target[__i] = source[__i];
+#define ITERATE_POP_START(p, pop, offset) int __itr = (int)ceil(p->blocks*(float)p->threads); \
+for(offset = 0; offset < pop->size; offset += __itr) {
+#define ITERATE_POP_END }
 
 typedef void (*generate_f)(pga_t *, population_t *);
 
-__global__ void __g_random_generate(gene *genomes, unsigned genome_len, float *rand, unsigned long p_size) {
-	int index = threadIdx.x + blockIdx.x * blockDim.x;
+__global__ void __g_random_generate(int offset, gene *genomes, unsigned genome_len, float *rand, unsigned long p_size) {
+	int index = offset + threadIdx.x + blockIdx.x * blockDim.x;
 	if (index >= p_size) return;
 
 	COPY_GENOME(GET_GENOME(genomes, index, genome_len), GET_GENOME(rand, index, genome_len), genome_len);	
 }
 
 void __random_generate(pga_t * p, population_t *pop) {
-	__g_random_generate<<<p->blocks, p->threads>>>(pop->current_gen, pop->genome_len, pop->rand, pop->size);
+	int offset;
+	ITERATE_POP_START(p, pop, offset)
+		__g_random_generate<<<p->blocks, p->threads>>>(offset, pop->current_gen, pop->genome_len, pop->rand, pop->size);
+	ITERATE_POP_END
 	CCE(cudaPeekAtLastError());
 	CCE(cudaDeviceSynchronize());
 }
@@ -214,6 +204,7 @@ population_t *pga_create_population(pga_t *p, unsigned long size, unsigned genom
 	
 	p->threads = MAX_THREADS;
 	p->blocks = (unsigned long)ceil(size / (float)p->threads);	
+
 	__fill_population(p, pop, type);
 	return pop;
 }
@@ -276,8 +267,8 @@ gene **pga_get_best_top_all(pga_t *p, unsigned length) {
 	return NULL;
 }
 
-__global__ void __g_evaluate(obj_f obj, gene *genomes, float *score, const unsigned long p_size, const int genome_len) {
-	int index = threadIdx.x + blockIdx.x * blockDim.x;
+__global__ void __g_evaluate(int offset, obj_f obj, gene *genomes, float *score, const unsigned long p_size, const int genome_len) {
+	int index = offset + threadIdx.x + blockIdx.x * blockDim.x;
 	if (index >= p_size) return;
 	
 	extern __shared__ float shared_genomes[];
@@ -288,8 +279,10 @@ __global__ void __g_evaluate(obj_f obj, gene *genomes, float *score, const unsig
 }
 
 void pga_evaluate(pga_t *p, population_t *pop) {
-	__g_evaluate<<<p->blocks, p->threads, p->threads*pop->genome_len*sizeof(gene)>>>(p->objective, pop->current_gen, pop->score, pop->size, pop->genome_len);
-
+	int offset;
+	ITERATE_POP_START(p, pop, offset)
+		__g_evaluate<<<p->blocks, p->threads, p->threads*pop->genome_len*sizeof(gene)>>>(offset, p->objective, pop->current_gen, pop->score, pop->size, pop->genome_len);
+	ITERATE_POP_END
 	CCE(cudaPeekAtLastError());
 	CCE(cudaDeviceSynchronize());
 }
@@ -316,8 +309,8 @@ __device__ int tournament_selection(float *score, float *rand, int size) {
 	return best;
 }
 
-__global__ void __g_crossover(crossover_f crossover, gene *newg, gene *oldg, float *score, float *rand, int genome_len, unsigned long p_size) {
-	int index = threadIdx.x + blockIdx.x * blockDim.x;
+__global__ void __g_crossover(int offset, crossover_f crossover, gene *newg, gene *oldg, float *score, float *rand, int genome_len, unsigned long p_size) {
+	int index = offset + threadIdx.x + blockIdx.x * blockDim.x;
 	if (index >= p_size) return;
 	
 	float *my_rand = rand + (index*genome_len);
@@ -335,7 +328,10 @@ __global__ void __g_crossover(crossover_f crossover, gene *newg, gene *oldg, flo
 }
 
 void pga_crossover(pga_t *p, population_t *pop, enum crossover_selection_type type) {
-	__g_crossover<<<p->blocks, p->threads, p->threads*pop->genome_len*sizeof(gene)>>>(p->crossover, pop->next_gen, pop->current_gen, pop->score, pop->rand, pop->genome_len, pop->size);
+	int offset;
+	ITERATE_POP_START(p, pop, offset)
+		__g_crossover<<<p->blocks, p->threads, p->threads*pop->genome_len*sizeof(gene)>>>(offset, p->crossover, pop->next_gen, pop->current_gen, pop->score, pop->rand, pop->genome_len, pop->size);
+	ITERATE_POP_END
 	CCE(cudaPeekAtLastError());
 	CCE(cudaDeviceSynchronize());
 }
@@ -346,8 +342,8 @@ void pga_crossover_all(pga_t *p, enum crossover_selection_type type) {
 	}
 }
 
-__global__ void __g_mutate(mutate_f mutate_func, gene *genomes, float* rand, unsigned long p_size, unsigned genome_len) {
-	int index = threadIdx.x + blockIdx.x * blockDim.x;
+__global__ void __g_mutate(int offset, mutate_f mutate_func, gene *genomes, float* rand, unsigned long p_size, unsigned genome_len) {
+	int index = offset + threadIdx.x + blockIdx.x * blockDim.x;
 	if (index >= p_size) return;
 	
 	extern __shared__ float shared_genomes[];
@@ -360,7 +356,10 @@ __global__ void __g_mutate(mutate_f mutate_func, gene *genomes, float* rand, uns
 }
 
 void pga_mutate(pga_t *p, population_t *pop) {
-	__g_mutate<<<p->blocks, p->threads, p->threads*pop->genome_len*sizeof(gene)>>>(p->mutate, pop->next_gen, pop->rand, pop->size, pop->genome_len);
+	int offset;
+	ITERATE_POP_START(p, pop, offset)
+		__g_mutate<<<p->blocks, p->threads, p->threads*pop->genome_len*sizeof(gene)>>>(offset, p->mutate, pop->next_gen, pop->rand, pop->size, pop->genome_len);
+	ITERATE_POP_END
 	CCE(cudaPeekAtLastError());
 	CCE(cudaDeviceSynchronize());
 }
@@ -385,7 +384,7 @@ void pga_migrate_between(pga_t *p, population_t *pop_org, population_t *pop_targ
 	//TODO: grzesiu
 }
 
-void pga_run(pga_t *p, unsigned n, float value) {
+void pga_run(pga_t *p, unsigned n) {
   cudaDeviceProp prop = {0};
 
 	if (p->p_count == 0) {
