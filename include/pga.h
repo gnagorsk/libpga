@@ -140,14 +140,14 @@ void pga_fill_random_values(pga_t *, population_t *);
  *   - mutate
  *  until n-generations or obj_func(best_genome) == value
  */
-void pga_run(pga_t *, unsigned n, float value);
+void pga_run(pga_t *, unsigned n);
 
 /*
  * runs island genetic algorithm
  * until n-generations or obj_func(best_genome) == value
  * random migrations happen every m-generations wih top %pct of population
  */
-void pga_run_islands(pga_t *, unsigned n, float value, unsigned m, float pct);
+void pga_run_islands(pga_t *, unsigned n, unsigned m, float pct);
 
 #ifdef __cplusplus
 }

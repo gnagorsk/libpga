@@ -46,7 +46,7 @@ int main() {
 	cudaMemcpyFromSymbol( &func , ofunction , sizeof(obj_f));
 	pga_set_objective_function(p, (obj_f)func);
 	
-	pga_run(p, 5, 0.f);
+	pga_run(p, 5);
 	
 	gene* g = pga_get_best(p, pop);
 	

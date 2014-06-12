@@ -19,7 +19,7 @@
 #include <float.h>
 #include <stdio.h>
 
-#define GENOME_LENGTH 1000
+#define GENOME_LENGTH 100
 
 __device__ float objf(gene *g, unsigned length) {
 	float s = 0;
@@ -40,7 +40,7 @@ int main() {
 	cudaMemcpyFromSymbol( &func , ofunction , sizeof(obj_f));
 	pga_set_objective_function(p, (obj_f)func);
 	
-	pga_run(p, 100, 0.f);
+	pga_run(p, 100);
 	
 	pga_get_best(p, pop);
 	

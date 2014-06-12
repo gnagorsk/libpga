@@ -90,7 +90,7 @@ int main() {
 	cudaMemcpyFromSymbol(&func ,cfunction ,sizeof(crossover_f));
 	pga_set_crossover_function(p, (crossover_f)func);
 	
-	pga_run(p, 1000, 0.f);
+	pga_run(p, 1000);
 	
 	gene* g = pga_get_best(p, pop);
 	
