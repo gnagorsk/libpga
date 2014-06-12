@@ -159,7 +159,7 @@ void pga_run(pga_t *, unsigned n, float value);
  * until n-generations or obj_func(best_genome) == value
  * random migrations happen every m-generations wih top %pct of population
  */
-void pga_run_islands(pga_t *, unsigned n, float value, unsigned m, float pct, get_best_node get_best);
+void pga_run_islands(pga_t *, unsigned n, float value, unsigned m, float pct, int node_rank, get_best_node get_best);
 
 #ifdef __cplusplus
 }

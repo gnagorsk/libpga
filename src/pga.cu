@@ -377,18 +377,16 @@ void pga_swap_generations(pga_t *p, population_t *pop) {
 	pop->current_gen = t;
 }
 
-void pga_emigrate(pga_t *p, float pct) {
-	//TODO: grzesiu
-}
-
-void pga_imigrate(pga_t *p, float pct) {
-	//TODO: grzesiu
-}
-
 void pga_run(pga_t *p, unsigned n, float value) {
+  cudaDeviceProp prop = {0};
+
 	if (p->p_count == 0) {
 		return;
 	}
+
+  cudaGetDeviceProperties(&prop, 0);
+
+  printf("Using device: %s\n", prop.name);
 	
 	for (unsigned i = 0; i < n; ++i) {
 		pga_fill_random_values(p, p->populations[0]);
@@ -410,13 +408,23 @@ void emigration_callback() {
   cudaMemcpy(emigrationBuffer, migrationP->populations[0]->current_gen, migrationSize, cudaMemcpyDeviceToHost);
 }
 
-void pga_run_islands(pga_t *p, unsigned n, float value, unsigned m, float pct, get_best_node get_best) {
+void pga_run_islands(pga_t *p, unsigned n, float value, unsigned m, float pct, int node_rank, get_best_node get_best) {
   unsigned subCnt = 0;
   int toSend = (int)ceil(((float)p->population_size * pct) / 100.f);
+  int devices = 0;
+  cudaDeviceProp prop = {0};
 
 	if (p->p_count == 0) {
 		return;
 	}
+
+  cudaGetDeviceCount(&devices);
+
+  cudaSetDevice(node_rank % devices);
+
+  cudaGetDeviceProperties(&prop, node_rank % devices);
+
+  printf("Using device: %s\n", prop.name);
 
   //migrationSize = toSend*sizeof(float)*p->populations[0]->genome_len;
   migrationSize = sizeof(gene)*p->populations[0]->genome_len*p->populations[0]->size;
@@ -440,7 +448,7 @@ void pga_run_islands(pga_t *p, unsigned n, float value, unsigned m, float pct, g
 
       get_best(pga_get_best_val(p, p->populations[0]), emigrationBuffer, migrationSize);
       
-      //cudaMemcpy(migrationP->populations[0]->current_gen, imigrationBuffer, migrationSize, cudaMemcpyHostToDevice);
+      cudaMemcpy(migrationP->populations[0]->current_gen, imigrationBuffer, migrationSize, cudaMemcpyHostToDevice);
 
       //p->emigration_func(emigrationBuffer, migrationSize, emigration_callback);
     }

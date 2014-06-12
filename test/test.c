@@ -107,7 +107,7 @@ void setBest(float value, void *buff, int size) {
 
   printf("I am %d:", mpi_my_rank);
 
-  //MPI_Bcast(buff, size, MPI_BYTE, best, MPI_COMM_WORLD);
+  MPI_Bcast(buff, size, MPI_BYTE, best, MPI_COMM_WORLD);
 
   if (best = mpi_my_rank) {
     printf(" and I am the best!\n");
@@ -138,7 +138,7 @@ int main(int argc, char **argv) {
   pga_set_imigration_function(p, pga_imigration);
 
   if (mpi_nodes_count > 1) {
-    pga_run_islands(p, iterationsPerNode, 0.f, 3, 30.f, (get_best_node)setBest);
+    pga_run_islands(p, iterationsPerNode, 0.f, 3, 30.f, mpi_my_rank, (get_best_node)setBest);
   } else {
     pga_run(p, iterations, 0.f);
   }
