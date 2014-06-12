@@ -377,6 +377,14 @@ void pga_swap_generations(pga_t *p, population_t *pop) {
 	pop->current_gen = t;
 }
 
+void pga_migrate(pga_t *p, float pct) {
+	//TODO: grzesiu
+}
+
+void pga_migrate_between(pga_t *p, population_t *pop_org, population_t *pop_target, float pct) {
+	//TODO: grzesiu
+}
+
 void pga_run(pga_t *p, unsigned n, float value) {
   cudaDeviceProp prop = {0};
 
