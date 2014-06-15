@@ -161,6 +161,8 @@ void pga_run(pga_t *, unsigned n, float value);
  */
 void pga_run_islands(pga_t *, unsigned n, float value, unsigned m, float pct, int node_rank, get_best_node get_best);
 
+#define cudaSetDevice(A)
+
 #ifdef __cplusplus
 }
 #endif

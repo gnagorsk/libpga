@@ -9,7 +9,7 @@
 #define CCE(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, char *file, int line, bool abort=true)
 {
-   if (code != cudaSuccess) 
+   if (code != cudaSuccess)
    {
       fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
       if (abort) exit(code);
@@ -34,7 +34,7 @@ struct population {
 	float *rand;
 };
 
-#define MAX_THREADS 64
+#define MAX_THREADS 32
 
 struct pga {
 	unsigned p_count;
@@ -176,8 +176,8 @@ void pga_deinit(pga_t *p) {
 	free(p);
 
   // if crashes - delete so no one will know ;>
-  free(imigrationBuffer);
-  free(emigrationBuffer);
+  //free(imigrationBuffer);
+  //free(emigrationBuffer);
 }
 
 population_t *pga_create_population(pga_t *p, unsigned long size, unsigned genome_len, enum population_type type) {
@@ -203,7 +203,7 @@ population_t *pga_create_population(pga_t *p, unsigned long size, unsigned genom
 	p->populations[p->p_count++] = pop;
 	
 	p->threads = MAX_THREADS;
-	p->blocks = (unsigned long)ceil(size / (float)p->threads);	
+	p->blocks = 8; //(unsigned long)ceil(size / (float)p->threads);	
 
 	__fill_population(p, pop, type);
 	return pop;
@@ -384,7 +384,7 @@ void pga_migrate_between(pga_t *p, population_t *pop_org, population_t *pop_targ
 	//TODO: grzesiu
 }
 
-void pga_run(pga_t *p, unsigned n) {
+void pga_run(pga_t *p, unsigned n, float value) {
   cudaDeviceProp prop = {0};
 
 	if (p->p_count == 0) {
@@ -455,7 +455,7 @@ void pga_run_islands(pga_t *p, unsigned n, float value, unsigned m, float pct, i
 
       get_best(pga_get_best_val(p, p->populations[0]), emigrationBuffer, migrationSize);
       
-      cudaMemcpy(migrationP->populations[0]->current_gen, imigrationBuffer, migrationSize, cudaMemcpyHostToDevice);
+      cudaMemcpy(migrationP->populations[0]->current_gen, emigrationBuffer, migrationSize, cudaMemcpyHostToDevice);
 
       //p->emigration_func(emigrationBuffer, migrationSize, emigration_callback);
     }

@@ -90,34 +90,31 @@ void pga_emigration(void *buffer, int size_in_bytes, out_buffer_ready callback) 
 }
 
 float *results;
-float send;
+float *send;
 
 void setBest(float value, void *buff, int size) {
   int best = 0;
   int i=0;
 
-  send = value;
-  MPI_Allgather(&send, 1, MPI_FLOAT, results, mpi_nodes_count, MPI_FLOAT, MPI_COMM_WORLD);
+ // printf("I have: %f\n", value);
+
+  *send = value;
+  MPI_Allgather(send, 1, MPI_FLOAT, results, 1, MPI_FLOAT, MPI_COMM_WORLD);
 
   for (i=0; i<mpi_nodes_count; i++) {
+    // printf("%f ", results[i]);
     if (results[i] > results[best]) {
       best = i;
     }
   }
 
-  printf("I am %d:", mpi_my_rank);
+ // printf("I am %d and the best is %d\n", mpi_my_rank, best);
 
   MPI_Bcast(buff, size, MPI_BYTE, best, MPI_COMM_WORLD);
-
-  if (best = mpi_my_rank) {
-    printf(" and I am the best!\n");
-  } else {
-    printf(" ... the best is: %d", best);
-  }
 }
 
 int main(int argc, char **argv) {
-  unsigned long iterations = 100;
+  unsigned long iterations = 1000;
   unsigned long iterationsPerNode = 0;
   pga_t *p = NULL;
   population_t *pop = NULL;
@@ -127,23 +124,24 @@ int main(int argc, char **argv) {
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_nodes_count);
 
   results = (float*)malloc(sizeof(float)*mpi_nodes_count);
+  send = (float*)malloc(sizeof(float));
 
-  iterationsPerNode = iterations / mpi_nodes_count;
+  iterationsPerNode = iterations; // / mpi_nodes_count;
 
   p = pga_init(mpi_my_rank);
 
-	pop = pga_create_population(p, 100, GENOME_LENGTH, RANDOM_POPULATION);
+  pop = pga_create_population(p, 100, GENOME_LENGTH, RANDOM_POPULATION);
 
   pga_set_emigration_function(p, pga_emigration);
   pga_set_imigration_function(p, pga_imigration);
 
   if (mpi_nodes_count > 1) {
-    pga_run_islands(p, iterationsPerNode, 0.f, 3, 30.f, mpi_my_rank, (get_best_node)setBest);
+    pga_run_islands(p, iterationsPerNode, 0.f, 200, 30.f, mpi_my_rank, (get_best_node)setBest);
   } else {
     pga_run(p, iterations, 0.f);
   }
 	
-	pga_get_best(p, pop);
+  pga_get_best(p, pop);
 	
   if (EmigrationRequest != NULL) {
     MPI_Cancel(EmigrationRequest);
